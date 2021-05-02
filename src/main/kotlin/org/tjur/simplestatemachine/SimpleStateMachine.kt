@@ -1,6 +1,5 @@
 package org.tjur.simplestatemachine
 
-import java.lang.IllegalStateException
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.reflect.KClass
@@ -32,21 +31,22 @@ open class SimpleStateMachine(private val initialState: KClass<*>) : Runnable {
                     break
                 }
                 else -> {
-                    val result = process(message, currentState)
-                    if (result.transition == null) continue
-                    if (result.transition.clearQueue) messageQueue.clear()
-                    messageQueue.put(result.transition)
+                    process(message, currentState).transition?.let {
+                        if (it.clearQueue) messageQueue.clear()
+                        messageQueue.put(it)
+                    }
                 }
             }
         }
         currentState.leave()
     }
 
+    /**
+     * Add an already instantiated state to the state machine.
+     */
     fun prepareState(state: State) {
         val name = state::class.qualifiedName ?: throw Exception("Could not get qualified name of $state")
-        if (states.containsKey(name)) {
-            throw Exception("$name has already been added.")
-        }
+        if (states.containsKey(name)) throw Exception("$name has already been added.")
         states[name] = state
     }
 
@@ -70,26 +70,17 @@ open class SimpleStateMachine(private val initialState: KClass<*>) : Runnable {
     private fun getState(kClass: KClass<*>): State {
         val stateName = kClass.qualifiedName ?: throw Exception("Could not retrieve the qualified name of $kClass.")
         val state = states[stateName]
-        if (state != null) {
-            return state
-        }
+        if (state != null) return state
         val newState = kClass.createInstance()
-        if (newState !is State) {
-            throw IllegalStateException("$stateName does not extend State.")
-        }
+        if (newState !is State) throw IllegalStateException("$stateName does not extend State.")
         states[stateName] = newState
         return newState
     }
 
     private fun process(message: Message, state: State): MessageResult {
-        var messageResult = state.process(message)
-        if (!messageResult.handled) {
-            val parent: KClass<*>? = state.getParentState()
-            if (parent != null) {
-                val parentState = getState(parent)
-                messageResult = process(message, parentState)
-            }
-        }
-        return messageResult
+        val messageResult = state.process(message)
+        if (messageResult.handled) return messageResult
+        val parent = state.getParentState() ?: return messageResult
+        return process(message, getState(parent))
     }
 }
