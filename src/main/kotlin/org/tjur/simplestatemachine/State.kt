@@ -46,14 +46,12 @@ abstract class State {
     fun unhandled() = MessageResult(false)
 
     /**
-     * Helper method telling the message was handled, and creating a transition to the desired state.
+     * Helper method for transitioning to a different state.
      */
-    fun handled(state: KClass<*>): MessageResult {
-        return MessageResult(true, TransitionMessage(state, true, null))
-    }
+    fun transitionTo(state: KClass<*>) = MessageResult(true, TransitionMessage(state, true, null))
 
     /**
-     * Helper method for a handled message with a transition with more options.
+     * Helper method for transitioning to a different state with more options.
      *
      * @param state Class of the state we want to transition to
      * @param clearQueue By default, we clear the message queue in the state machine when we transition
@@ -61,7 +59,7 @@ abstract class State {
      *                   will process before the transition.
      * @param message An optional message to be delivered to the state we want to transition to.
      */
-    fun handled(state: KClass<*>, clearQueue: Boolean, message: Message?): MessageResult {
+    fun transitionTo(state: KClass<*>, clearQueue: Boolean, message: Message?): MessageResult {
         return MessageResult(true, TransitionMessage(state, clearQueue, message))
     }
 }

@@ -50,13 +50,15 @@ override fun process(message: Message): MessageResult {
 
 ## Transitioning to a different state
 
-As a part of handling a message, you can return that you want to transition to a different state
+As a result of handling a message, you can return that you want to transition to a different state:
 
 ````
 if (message is LaunchMessage) {
-    return handled(LaunchState::class)
+    return transitionTo(LaunchState::class)
 }
 ````
+
+By default this will clear the message queue in the state machine.
 
 ## Initializing states
 
@@ -80,7 +82,7 @@ will use your instance.
 class StartingState : State() {
     override fun enter(message: Message?): MessageResult {
         println("Entered StartingState, but transitioning to SecondState")
-        return handled(SecondState::class)
+        return transitionTo(SecondState::class)
     }
 
     override fun leave() {
