@@ -1,7 +1,9 @@
 package org.tjur.simplestatemachine
 
+import java.util.*
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
+import kotlin.collections.HashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
@@ -9,36 +11,33 @@ open class SimpleStateMachine(private val initialState: KClass<*>) : Runnable {
 
     private val messageQueue: BlockingQueue<Message> = LinkedBlockingQueue()
     private val states: MutableMap <String, State> = HashMap()
+    private val stateStack : Deque<State> = ArrayDeque()
     private lateinit var currentState: State
 
     override fun run() {
-        currentState = getState(initialState)
-        currentState.enter().transition?.let {
-            if (it.clearQueue) messageQueue.clear()
-            messageQueue.put(it)
-        }
+        transition(getState(initialState), StartupMessage())
         while (true) {
             when (val message = messageQueue.take()) {
                 is TransitionMessage -> {
-                    currentState.leave()
-                    currentState = getState(message.state)
-                    val result = currentState.enter(message.message)
-                    if (result.transition == null) continue
-                    if (result.transition.clearQueue) messageQueue.clear()
-                    messageQueue.put(result.transition)
+                    transition(getState(message.state), message.message)
                 }
                 is StopMessage -> {
                     break
                 }
                 else -> {
                     process(message, currentState).transition?.let {
-                        if (it.clearQueue) messageQueue.clear()
+                        if (it.clearQueue) clearQueue()
                         messageQueue.put(it)
                     }
                 }
             }
         }
         currentState.leave()
+        stateStack.forEach { it.leave() }
+    }
+
+    fun clearQueue() {
+        messageQueue.removeIf { it !is StopMessage }
     }
 
     /**
@@ -65,6 +64,52 @@ open class SimpleStateMachine(private val initialState: KClass<*>) : Runnable {
     fun stop() {
         messageQueue.clear()
         messageQueue.put(StopMessage())
+    }
+
+    private fun transition(newState: State, message: Message?) {
+        val newStateStack = getParentStates(newState)
+
+        // check for any potential parent states we have now left behind
+        if (message !is StartupMessage) {
+            currentState.leave()
+            stateStack.filter { !newStateStack.contains(it) }
+                      .forEach { it.leave() }
+        }
+
+        // check for any potential parent states we are now entering
+        newStateStack.filter { !stateStack.contains(it) }
+                     .reversed()
+                     .forEach { enterState(it, message) }
+
+        // refresh the state stack to reflect our current position
+        stateStack.clear()
+        stateStack.addAll(newStateStack)
+
+        // enter our current state
+        currentState = newState
+        enterState(newState, message)
+    }
+
+    private fun enterState(state: State, message: Message?) {
+        val result = state.enter(message)
+        if (result.transition == null) return
+        if (result.transition.clearQueue) clearQueue()
+        messageQueue.put(result.transition)
+    }
+
+    private fun getParentStates(state: State): Deque<State> {
+        val parent = state.getParentState()
+        return if (parent == null) {
+            ArrayDeque()
+        } else {
+            val parentState = getState(parent)
+            val deque = getParentStates(parentState)
+            if (deque.contains(parentState)) {
+                throw IllegalStateException("Cyclic parent states for $state")
+            }
+            deque.push(parentState)
+            deque
+        }
     }
 
     private fun getState(kClass: KClass<*>): State {
