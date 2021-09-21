@@ -25,10 +25,10 @@ open class SimpleStateMachine(private val initialState: KClass<*>) : Runnable {
                     break
                 }
                 else -> {
-                    process(message, currentState).transition?.let {
-                        if (it.clearQueue) clearQueue()
-                        messageQueue.put(it)
-                    }
+                    val response = process(message, currentState)
+                    if (response.clearQueue)
+                        messageQueue.clear()
+                    response.message?.let { messageQueue.put(it) }
                 }
             }
         }
@@ -36,6 +36,9 @@ open class SimpleStateMachine(private val initialState: KClass<*>) : Runnable {
         stateStack.forEach { it.leave() }
     }
 
+    /**
+     * Clears the messages queued up in the state machine.
+     */
     fun clearQueue() {
         messageQueue.removeIf { it !is StopMessage }
     }
@@ -92,9 +95,8 @@ open class SimpleStateMachine(private val initialState: KClass<*>) : Runnable {
 
     private fun enterState(state: State, message: Message?) {
         val result = state.enter(message)
-        if (result.transition == null) return
-        if (result.transition.clearQueue) clearQueue()
-        messageQueue.put(result.transition)
+        if (result.clearQueue) clearQueue()
+        result.message?.let { messageQueue.put(it) }
     }
 
     private fun getParentStates(state: State): Deque<State> {

@@ -38,7 +38,7 @@ abstract class State {
     /**
      * Helper method that constructs a simple MessageResult telling the processed message was handled.
      */
-    fun handled() = MessageResult(true, null)
+    fun handled() = MessageResult(true, false, null)
 
     /**
      * Helper method that constructs a simple MessageResult telling the processed message was not handled.
@@ -46,9 +46,14 @@ abstract class State {
     fun unhandled() = MessageResult(false)
 
     /**
+     * Helper method for stopping the state machine.
+     */
+    fun halt() = MessageResult(true, true, StopMessage())
+
+    /**
      * Helper method for transitioning to a different state.
      */
-    fun transitionTo(state: KClass<*>) = MessageResult(true, TransitionMessage(state, true, null))
+    fun transitionTo(state: KClass<*>) = MessageResult(true, true, TransitionMessage(state, null))
 
     /**
      * Helper method for transitioning to a different state with more options.
@@ -60,6 +65,6 @@ abstract class State {
      * @param message An optional message to be delivered to the state we want to transition to.
      */
     fun transitionTo(state: KClass<*>, clearQueue: Boolean, message: Message?): MessageResult {
-        return MessageResult(true, TransitionMessage(state, clearQueue, message))
+        return MessageResult(true, clearQueue, TransitionMessage(state, message))
     }
 }
