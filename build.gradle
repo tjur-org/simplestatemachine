@@ -4,14 +4,14 @@ plugins {
 }
 
 group 'org.tjur'
-version '0.9'
+version '0.5'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.1.0"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.4.10"
     compile "org.jetbrains.kotlin:kotlin-reflect:1.1.0"
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
