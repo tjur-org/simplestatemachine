@@ -32,7 +32,6 @@ open class SimpleStateMachine(private val initialState: KClass<*>) : Runnable {
                 }
             }
         }
-        currentState.leave()
         stateStack.forEach { it.leave() }
     }
 
@@ -71,10 +70,10 @@ open class SimpleStateMachine(private val initialState: KClass<*>) : Runnable {
 
     private fun transition(newState: State, message: Message?) {
         val newStateStack = getParentStates(newState)
+        newStateStack.push(newState)
 
         // check for any potential parent states we have now left behind
         if (message !is StartupMessage) {
-            currentState.leave()
             stateStack.filter { !newStateStack.contains(it) }
                       .forEach { it.leave() }
         }
@@ -90,7 +89,6 @@ open class SimpleStateMachine(private val initialState: KClass<*>) : Runnable {
 
         // enter our current state
         currentState = newState
-        enterState(newState, message)
     }
 
     private fun enterState(state: State, message: Message?) {
