@@ -4,6 +4,26 @@ This is an implementation of a finite state machine in Kotlin.
 
 The main class `SimpleStateMachine` is open and extendable, but should be usable out of the box for most use cases.
 
+## Installing
+
+Add jitpack to your `build.gradle`
+
+````
+allprojects {
+    repositories {
+        maven { url 'https://jitpack.io' }
+    }
+}
+````
+
+Then add this project as a dependency:
+
+````
+dependencies {
+    implementation 'org.tjur:simplestatemachine:0.5'
+}
+````
+
 ## How to use
 
 Create a class and extend `State`. The only method you are required to override is `process`, which is
