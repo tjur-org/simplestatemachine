@@ -9,7 +9,7 @@ abstract class State {
      * @param message If this state was transitioned to accompanied by a message
      * @return A MessageResult that may contain a TransitionMesage, but is otherwise ignored.
      */
-    open fun enter(message: Message? = null) = handled()
+    open fun enter(message: Message? = null) = unhandled()
 
     /**
      * Called when this state is transitioned out of.
